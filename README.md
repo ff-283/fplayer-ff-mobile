@@ -12,6 +12,15 @@
    flutter run
    ```
 
+## 1.1 应用图标（Android）
+
+当前已配置使用 `doc/img/icon.png` 作为 Android 应用图标。首次或图标变更后请执行：
+
+```bash
+flutter pub get
+dart run flutter_launcher_icons
+```
+
 ## 2. 使用方式
 
 应用内提供两种模式：
