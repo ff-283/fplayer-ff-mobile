@@ -73,13 +73,22 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
 
   String? _error;
   bool _loading = false;
+  bool _isStreaming = false;
   UrlInputMode _inputMode = UrlInputMode.service;
-  ServicePlayProtocol? _servicePlayProtocol =
-      kIsWeb ? ServicePlayProtocol.hls : ServicePlayProtocol.httpFlv;
+  ServicePlayProtocol? _servicePlayProtocol;
+
+  bool get _isAndroidRuntime =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _canPull => !_loading && !_isStreaming;
+  bool get _canStop => _loading || _isStreaming;
 
   @override
   void initState() {
     super.initState();
+    _servicePlayProtocol =
+        (kIsWeb || _isAndroidRuntime)
+            ? ServicePlayProtocol.hls
+            : ServicePlayProtocol.httpFlv;
     _player = Player();
     _videoController = VideoController(_player);
     _addLog('播放器初始化完成');
@@ -87,6 +96,9 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
   }
 
   Future<void> _play() async {
+    if (_isStreaming || _loading) {
+      return;
+    }
     String url = _urlController.text.trim();
     if (_inputMode == UrlInputMode.service) {
       try {
@@ -101,7 +113,7 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
       }
     }
 
-    _addLog('点击播放: $url');
+    _addLog('点击拉流: $url');
     if (url.isEmpty) {
       setState(() {
         _error = '请输入 HTTP-FLV 地址';
@@ -121,9 +133,16 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
       return;
     }
 
+    if (_isAndroidRuntime && _looksLikeFlvOrRtmp(url)) {
+      const String msg =
+          '当前为 Android 端，HTTP-FLV/RTMP 在部分机型/模拟器可能黑屏。建议优先使用 HLS，必要时改用真机测试。';
+      _addLog(msg, level: LogLevel.warn);
+    }
+
     setState(() {
       _error = null;
       _loading = true;
+      _isStreaming = true;
     });
 
     try {
@@ -132,6 +151,7 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
     } catch (e) {
       setState(() {
         _error = '播放失败: $e';
+        _isStreaming = false;
       });
       _addLog('播放异常: $e', level: LogLevel.error);
     } finally {
@@ -202,9 +222,24 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
   }
 
   Future<void> _stop() async {
-    _addLog('点击停止');
-    await _player.stop();
-    _addLog('已停止播放');
+    if (!_isStreaming && !_loading) {
+      return;
+    }
+    _addLog('点击停止拉流');
+    try {
+      await _player.stop();
+      await _player.pause();
+      _addLog('已终止拉流并暂停播放器');
+    } catch (e) {
+      _addLog('停止异常: $e', level: LogLevel.error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _isStreaming = false;
+        });
+      }
+    }
   }
 
   void _bindPlayerLogs() {
@@ -444,14 +479,14 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
                 children: <Widget>[
                   Expanded(
                     child: FilledButton(
-                      onPressed: _loading ? null : _play,
-                      child: Text(_loading ? '连接中...' : '播放'),
+                      onPressed: _canPull ? _play : null,
+                      child: Text(_loading ? '拉流中...' : '拉流'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _stop,
+                      onPressed: _canStop ? _stop : null,
                       child: const Text('停止'),
                     ),
                   ),
