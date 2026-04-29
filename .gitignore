@@ -43,3 +43,24 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release artifacts
+/dist/
+
+# Legacy Flutter generated plugin file
+.flutter-plugins
+
+# Android local machine config
+/android/local.properties
+
+# Android signing files (never commit)
+android/key.properties
+android/*.jks
+android/*.keystore
+*.jks
+*.keystore
+
+# Optional fastlane generated outputs
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/**
