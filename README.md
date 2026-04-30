@@ -6,6 +6,31 @@
 
 `fplayer-ff-mobile` 是一个用于局域网播放服务流（HLS/HTTP-FLV/RTMP）的 Flutter 客户端。
 
+## 技术栈
+
+客户端采用 **Flutter** 实现跨平台 UI 与业务逻辑，与 `fplayer-ff-service` 的 Gateway 联调时通过 HTTP 拉取解析后的播放地址。各层技术如下。
+
+- **语言与框架**：**Dart 3.3+**、**Flutter**（声明式 UI、Material 组件）。
+- **媒体播放**：[media_kit](https://pub.dev/packages/media_kit) 系列（`media_kit`、`media_kit_video`、`media_kit_libs_video`），基于 libmpv 等原生库，用于 HLS / HTTP-FLV / RTMP 等拉流与解码渲染。
+- **网络**：`http` 包，请求 Gateway（例如 `GET /api/v1/streams/resolve`）获取 HLS、HTTP-FLV、RTMP 等地址。
+- **目标平台**：**Android**、**Windows** 桌面；**Web**（浏览器侧以 HLS 兼容性为佳）。
+- **工程工具**：`flutter_lints` 静态分析、`flutter_launcher_icons` 生成 Android 应用图标；发布脚本见 `scripts/build_release.ps1`。
+
+## 功能
+
+### 本项目可独立提供的能力
+
+- **多协议拉流播放**：支持 HLS / HTTP-FLV / RTMP 播放，覆盖常见局域网流媒体消费场景。
+- **双模式播放入口**：提供“服务地址模式”和“直接 URL 模式”，既可标准化接入，也可用于快速临时调试。
+- **跨平台客户端形态**：可运行在 Android、Windows 与 Web（推荐 HLS），满足移动端和桌面端播放需求。
+- **发布流程标准化**：内置统一打包脚本，可产出 APK / AAB / Windows 包并附带校验信息，便于测试分发与正式发布。
+
+### 与其他项目的联合功能
+
+- **与 `fplayer-ff-service` 联动（推荐）**：通过调用 Gateway 的 `resolve` 接口自动获取真实播放地址，避免手工处理端口漂移与协议差异。
+- **与 `fplayer-ff-desktop` 联动（观看端）**：desktop 无论是单独 P2P 推流，还是接入 service 后的编排推流，mobile 均可作为移动观看端接入播放。
+- **三端协同链路**：desktop 生产流 -> service 编排并暴露播放地址 -> mobile 拉流播放，形成完整的局域网流媒体消费路径。
+
 ## 1. 快速启动
 
 1. 确保 Flutter SDK 可用（已加入 PATH）
