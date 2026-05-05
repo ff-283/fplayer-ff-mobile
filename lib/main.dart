@@ -82,112 +82,312 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+const _kThemeMode = 'theme_mode';
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => MyAppState();
+}
+
+class MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  ThemeMode get themeMode => _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString(_kThemeMode);
+    if (!mounted) return;
+    setState(() {
+      switch (mode) {
+        case 'light':
+          _themeMode = ThemeMode.light;
+          break;
+        case 'dark':
+          _themeMode = ThemeMode.dark;
+          break;
+        default:
+          _themeMode = ThemeMode.system;
+      }
+    });
+  }
+
+  Future<void> setThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      switch (_themeMode) {
+        case ThemeMode.system:
+          _themeMode = ThemeMode.light;
+          break;
+        case ThemeMode.light:
+          _themeMode = ThemeMode.dark;
+          break;
+        case ThemeMode.dark:
+          _themeMode = ThemeMode.system;
+          break;
+      }
+    });
+    await prefs.setString(_kThemeMode, _themeMode.name);
+  }
+
+  IconData themeIcon() {
+    switch (_themeMode) {
+      case ThemeMode.system:
+        return Icons.brightness_auto_rounded;
+      case ThemeMode.light:
+        return Icons.light_mode_rounded;
+      case ThemeMode.dark:
+        return Icons.dark_mode_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Service Stream Player',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF58A6FF),
-          onPrimary: Color(0xFF0D1117),
-          primaryContainer: Color(0xFF1A3A5C),
-          secondary: Color(0xFF3FB950),
-          onSecondary: Color(0xFF0D1117),
-          tertiary: Color(0xFF8B949E),
-          surface: Color(0xFF161B22),
-          surfaceContainerHighest: Color(0xFF21262D),
-          error: Color(0xFFF85149),
-          onError: Color(0xFFFFFFFF),
-          onSurface: Color(0xFFC9D1D9),
-          outline: Color(0xFF30363D),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0D1117),
-        useMaterial3: true,
-        cardTheme: CardThemeData(
-          color: const Color(0xFF161B22),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF30363D), width: 1),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFF0D1117),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF30363D)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF30363D)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF58A6FF), width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          labelStyle: const TextStyle(color: Color(0xFF8B949E)),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF238636),
-            foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFF85149),
-            side: const BorderSide(color: Color(0xFFF85149)),
-            minimumSize: const Size.fromHeight(48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ),
-        segmentedButtonTheme: SegmentedButtonThemeData(
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return const Color(0xFF388BFD);
-              }
-              return const Color(0xFF21262D);
-            }),
-            foregroundColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return Colors.white;
-              }
-              return const Color(0xFF8B949E);
-            }),
-            side: WidgetStateProperty.resolveWith((states) {
-              return BorderSide(
-                color: states.contains(WidgetState.selected)
-                    ? const Color(0xFF388BFD)
-                    : const Color(0xFF30363D),
-              );
-            }),
-            shape: WidgetStateProperty.all(RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            )),
-          ),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          backgroundColor: const Color(0xFF21262D),
-          contentTextStyle: const TextStyle(color: Color(0xFFC9D1D9)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          behavior: SnackBarBehavior.floating,
+      themeMode: _themeMode,
+      theme: _buildLightTheme(),
+      darkTheme: _buildDarkTheme(),
+      home: const HttpFlvPlayerPage(),
+    );
+  }
+
+  static ThemeData _buildLightTheme() {
+    return ThemeData(
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: Color(0xFF17171C),
+        onPrimary: Color(0xFFFFFFFF),
+        primaryContainer: Color(0xFF003C33),
+        secondary: Color(0xFF1863DC),
+        onSecondary: Color(0xFFFFFFFF),
+        tertiary: Color(0xFF75758A),
+        surface: Color(0xFFFFFFFF),
+        surfaceContainerHighest: Color(0xFFEEECE7),
+        error: Color(0xFFB30000),
+        onError: Color(0xFFFFFFFF),
+        onSurface: Color(0xFF212121),
+        outline: Color(0xFFD9D9DD),
+      ),
+      scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+      useMaterial3: true,
+      cardTheme: CardThemeData(
+        color: const Color(0xFFFFFFFF),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: Color(0xFFD9D9DD), width: 0.5),
         ),
       ),
-      home: const HttpFlvPlayerPage(),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF5F5F5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFD9D9DD)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFD9D9DD)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF9B60AA), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        labelStyle: const TextStyle(color: Color(0xFF75758A)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF17171C),
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF17171C),
+          side: const BorderSide(color: Color(0xFFD9D9DD)),
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFF17171C);
+            }
+            return const Color(0xFFEEECE7);
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white;
+            }
+            return const Color(0xFF75758A);
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            return const BorderSide(color: Color(0xFFD9D9DD));
+          }),
+          shape: WidgetStateProperty.all(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          )),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFFEEECE7),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFF212121),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  static ThemeData _buildDarkTheme() {
+    return ThemeData(
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF17171C),
+        onPrimary: Color(0xFFFFFFFF),
+        primaryContainer: Color(0xFF003C33),
+        secondary: Color(0xFF1863DC),
+        onSecondary: Color(0xFFFFFFFF),
+        tertiary: Color(0xFF93939F),
+        surface: Color(0xFF1E1E23),
+        surfaceContainerHighest: Color(0xFF26262D),
+        error: Color(0xFFB30000),
+        onError: Color(0xFFFFFFFF),
+        onSurface: Color(0xFFFFFFFF),
+        outline: Color(0xFF38383E),
+      ),
+      scaffoldBackgroundColor: const Color(0xFF17171C),
+      useMaterial3: true,
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1E1E23),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: const BorderSide(color: Color(0xFF38383E), width: 0.5),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF222228),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF38383E)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF38383E)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF9B60AA), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        labelStyle: const TextStyle(color: Color(0xFF93939F)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF17171C),
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF17171C),
+          side: const BorderSide(color: Color(0xFF38383E)),
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFF17171C);
+            }
+            return const Color(0xFF26262D);
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white;
+            }
+            return const Color(0xFF93939F);
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            return const BorderSide(color: Color(0xFF38383E));
+          }),
+          shape: WidgetStateProperty.all(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          )),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF26262D),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFFFFFFFF),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }
@@ -199,8 +399,7 @@ class HttpFlvPlayerPage extends StatefulWidget {
   State<HttpFlvPlayerPage> createState() => _HttpFlvPlayerPageState();
 }
 
-class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
-    with TickerProviderStateMixin {
+class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage> {
   late final Player _player;
   late final VideoController _videoController;
   final ScrollController _logScrollController = ScrollController();
@@ -223,9 +422,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
   UrlInputMode _inputMode = UrlInputMode.service;
   ServicePlayProtocol? _servicePlayProtocol;
 
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
-
   bool get _isAndroidRuntime =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
   bool get _canPull => !_loading && !_isStreaming;
@@ -239,13 +435,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
         : ServicePlayProtocol.httpFlv;
     _player = Player();
     _videoController = VideoController(_player);
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.06).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
     _addLog('播放器初始化完成');
     _bindPlayerLogs();
     _loadSettings();
@@ -292,7 +481,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
       _loading = true;
       _isStreaming = true;
     });
-    _pulseController.repeat(reverse: true);
 
     try {
       await _player.open(Media(url), play: true);
@@ -302,8 +490,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
         _error = '播放失败: $e';
         _isStreaming = false;
       });
-      _pulseController.stop();
-      _pulseController.reset();
       _addLog('播放异常: $e', level: LogLevel.error);
     } finally {
       if (mounted) {
@@ -375,8 +561,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
   Future<void> _stop() async {
     if (!_isStreaming && !_loading) return;
     _addLog('点击停止拉流');
-    _pulseController.stop();
-    _pulseController.reset();
     try {
       await _player.stop();
       await _player.pause();
@@ -525,11 +709,11 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
   Color _levelColor(LogLevel level) {
     switch (level) {
       case LogLevel.info:
-        return const Color(0xFF58A6FF);
+        return const Color(0xFF1863DC);
       case LogLevel.warn:
-        return const Color(0xFFD29922);
+        return const Color(0xFFFF7759);
       case LogLevel.error:
-        return const Color(0xFFF85149);
+        return const Color(0xFFB30000);
     }
   }
 
@@ -540,7 +724,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
     _appController.dispose();
     _streamController.dispose();
     _logScrollController.dispose();
-    _pulseController.dispose();
     _player.dispose();
     super.dispose();
   }
@@ -552,15 +735,7 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
 
     return Scaffold(
       appBar: _buildAppBar(colors),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0D1117), Color(0xFF010409)],
-          ),
-        ),
-        child: SafeArea(
+      body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.only(bottom: 24),
             children: <Widget>[
@@ -576,21 +751,12 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
             ],
           ),
         ),
-      ),
     );
   }
 
   PreferredSizeWidget _buildAppBar(ColorScheme colors) {
     return AppBar(
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF161B22), Color(0xFF0D1117)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-      ),
+      backgroundColor: colors.primaryContainer,
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -599,30 +765,44 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
             height: 32,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF58A6FF), Color(0xFF3FB950)],
-              ),
+              color: colors.primary,
             ),
             child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             '局域网流播放器',
-            style: TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.5),
+            style: TextStyle(
+              fontWeight: FontWeight.w400,
+              fontSize: 18,
+              letterSpacing: -0.36,
+              color: colors.onPrimary,
+            ),
           ),
         ],
       ),
       centerTitle: false,
       elevation: 0,
-      scrolledUnderElevation: 1,
-      shadowColor: colors.outline,
+      scrolledUnderElevation: 0,
       actions: <Widget>[
         if (_isStreaming)
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: _StreamingBadge(pulseController: _pulseController),
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: _StreamingBadge(),
           ),
+        _buildThemeToggle(),
       ],
+    );
+  }
+
+  Widget _buildThemeToggle() {
+    final MyAppState? appState = context.findAncestorStateOfType<MyAppState>();
+    return IconButton(
+      icon: Icon(appState?.themeIcon() ?? Icons.brightness_auto_rounded, size: 20),
+      tooltip: '切换主题',
+      onPressed: () => appState?.setThemeMode(),
+      color: Colors.white,
+      splashRadius: 20,
     );
   }
 
@@ -632,83 +812,70 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (BuildContext context, Widget? child) {
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _isStreaming
-                        ? const Color(0xFF388BFD).withValues(alpha: 0.6)
-                        : const Color(0xFF30363D),
-                    width: _isStreaming ? 2 : 1,
-                  ),
-                  boxShadow: _isStreaming
-                      ? <BoxShadow>[
-                          BoxShadow(
-                            color: const Color(0xFF388BFD).withValues(alpha: 0.15),
-                            blurRadius: 12 + _pulseAnimation.value * 4,
-                            spreadRadius: _pulseAnimation.value * 2,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(11),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: ColoredBox(
-                      color: Colors.black,
-                      child: Stack(
-                        children: <Widget>[
-                          Video(
-                            controller: _videoController,
-                            controls: _liveControls,
-                          ),
-                          if (!_isStreaming)
-                            Positioned.fill(
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Icon(
-                                      Icons.live_tv_rounded,
-                                      size: 56,
-                                      color: colors.onSurface.withValues(alpha: 0.2),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      '等待播放',
-                                      style: TextStyle(
-                                        color: colors.onSurface.withValues(alpha: 0.3),
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ],
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: _isStreaming
+                    ? colors.secondary.withValues(alpha: 0.4)
+                    : colors.outline,
+                width: _isStreaming ? 1 : 0.5,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(21),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: Stack(
+                    children: <Widget>[
+                      Video(
+                        controller: _videoController,
+                        controls: _liveControls,
+                      ),
+                      if (!_isStreaming)
+                        Positioned.fill(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(
+                                  Icons.live_tv_rounded,
+                                  size: 40,
+                                  color: colors.onSurface.withValues(alpha: 0.12),
                                 ),
-                              ),
-                            ),
-                          if (_loading)
-                            const Positioned.fill(
-                              child: Center(
-                                child: SizedBox(
-                                  width: 48,
-                                  height: 48,
-                                  child: CircularProgressIndicator(
-                                    color: Color(0xFF58A6FF),
-                                    strokeWidth: 3,
+                                const SizedBox(height: 16),
+                                Text(
+                                  '等待播放',
+                                  style: TextStyle(
+                                    color: colors.onSurface.withValues(alpha: 0.2),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_loading)
+                        Positioned.fill(
+                          child: Center(
+                            child: SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: CircularProgressIndicator(
+                                color: colors.secondary,
+                                strokeWidth: 2.5,
                               ),
                             ),
-                        ],
-                      ),
-                    ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ),
@@ -779,7 +946,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
                       ),
                       keyboardType: TextInputType.url,
                       autocorrect: false,
-                      style: const TextStyle(fontSize: 14),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -791,7 +957,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
                               labelText: 'App',
                               prefixIcon: Icon(Icons.apps_rounded, size: 20),
                             ),
-                            style: const TextStyle(fontSize: 14),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -802,7 +967,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
                               labelText: 'Stream',
                               prefixIcon: Icon(Icons.stream_rounded, size: 20),
                             ),
-                            style: const TextStyle(fontSize: 14),
                           ),
                         ),
                       ],
@@ -897,7 +1061,6 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
             keyboardType: TextInputType.url,
             autocorrect: false,
             style: TextStyle(
-              fontSize: 14,
               color: _inputMode == UrlInputMode.service
                   ? colors.tertiary
                   : colors.onSurface,
@@ -959,39 +1122,44 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: Card(
-            color: colors.error.withValues(alpha: 0.1),
-            shape: RoundedRectangleBorder(
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              side: BorderSide(color: colors.error.withValues(alpha: 0.3)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Icon(Icons.error_outline, color: colors.error, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: colors.error, fontSize: 13),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => setState(() => _error = null),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 16,
-                        color: colors.error.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ),
-                ],
+              border: Border.all(
+                color: colors.error.withValues(alpha: 0.2),
+                width: 0.5,
               ),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(Icons.error_outline, color: colors.error, size: 16),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: TextStyle(
+                      color: colors.error,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => setState(() => _error = null),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: colors.error.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1007,9 +1175,9 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
           constraints: const BoxConstraints(maxWidth: 800),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF010409),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF30363D)),
+              color: colors.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: colors.outline, width: 0.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1031,30 +1199,30 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: const BoxDecoration(
-        color: Color(0xFF161B22),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(9)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(21)),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF30363D)),
+          bottom: BorderSide(color: colors.outline, width: 0.5),
         ),
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.terminal_rounded, size: 18, color: Color(0xFF8B949E)),
+          Icon(Icons.terminal_rounded, size: 16, color: colors.tertiary),
           const SizedBox(width: 8),
           Text(
             '日志',
             style: textTheme.titleSmall?.copyWith(
-              color: const Color(0xFFC9D1D9),
-              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
+              fontWeight: FontWeight.w400,
             ),
           ),
           const SizedBox(width: 12),
-          _LogCountBadge(label: '$infoCount', color: const Color(0xFF58A6FF)),
+          _LogCountBadge(label: '$infoCount', color: const Color(0xFF1863DC)),
           const SizedBox(width: 4),
-          _LogCountBadge(label: '$warnCount', color: const Color(0xFFD29922)),
+          _LogCountBadge(label: '$warnCount', color: const Color(0xFFFF7759)),
           const SizedBox(width: 4),
-          _LogCountBadge(label: '$errorCount', color: const Color(0xFFF85149)),
+          _LogCountBadge(label: '$errorCount', color: const Color(0xFFB30000)),
           const Spacer(),
           _LogActionButton(
             icon: Icons.copy_rounded,
@@ -1082,8 +1250,8 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
                 child: Text(
                   '暂无日志',
                   style: TextStyle(
-                    color: const Color(0xFF484F58),
-                    fontSize: 13,
+                    color: colors.tertiary,
+                    fontSize: 14,
                   ),
                 ),
               )
@@ -1102,49 +1270,42 @@ class _HttpFlvPlayerPageState extends State<HttpFlvPlayerPage>
 }
 
 class _StreamingBadge extends StatelessWidget {
-  const _StreamingBadge({required this.pulseController});
-
-  final AnimationController pulseController;
+  const _StreamingBadge();
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: pulseController,
-      builder: (BuildContext context, Widget? child) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: const Color(0xFF238636).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF3FB950).withValues(alpha: 0.4),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF7759).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFFF7759).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFF7759),
+              shape: BoxShape.circle,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF3FB950),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'LIVE',
-                style: TextStyle(
-                  color: Color(0xFF3FB950),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
+          const SizedBox(width: 6),
+          const Text(
+            'LIVE',
+            style: TextStyle(
+              color: Color(0xFFFF7759),
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
@@ -1160,12 +1321,17 @@ class _LogCountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0,
+        ),
       ),
     );
   }
@@ -1184,6 +1350,7 @@ class _LogActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -1195,8 +1362,8 @@ class _LogActionButton extends StatelessWidget {
             icon,
             size: 16,
             color: onTap != null
-                ? const Color(0xFF8B949E)
-                : const Color(0xFF484F58),
+                ? colors.tertiary
+                : colors.tertiary.withValues(alpha: 0.4),
           ),
         ),
       ),
@@ -1212,33 +1379,35 @@ class _LogRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             entry.time,
-            style: const TextStyle(
-              color: Color(0xFF484F58),
+            style: TextStyle(
+              color: colors.tertiary,
               fontSize: 12,
-              fontFamily: 'monospace',
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
             decoration: BoxDecoration(
-              color: levelColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(3),
+              color: levelColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               entry.level.name.toUpperCase(),
               style: TextStyle(
                 color: levelColor,
                 fontSize: 10,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'monospace',
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0.28,
               ),
             ),
           ),
@@ -1246,10 +1415,11 @@ class _LogRow extends StatelessWidget {
           Expanded(
             child: Text(
               entry.message,
-              style: const TextStyle(
-                color: Color(0xFFC9D1D9),
+              style: TextStyle(
+                color: colors.onSurface,
                 fontSize: 12,
-                fontFamily: 'monospace',
+                fontWeight: FontWeight.w400,
+                letterSpacing: 0,
               ),
             ),
           ),
